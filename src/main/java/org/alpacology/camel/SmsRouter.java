@@ -7,6 +7,10 @@ import org.springframework.stereotype.Component;
 public class SmsRouter extends RouteBuilder {
     @Override
     public void configure() throws Exception {
+        errorHandler(deadLetterChannel("jms:queue:dead")
+                .maximumRedeliveries(3)
+                .redeliveryDelay(1000));
+
         from("jms:queue:sms")
                 .throttle(2)
                 .timePeriodMillis(1000)
