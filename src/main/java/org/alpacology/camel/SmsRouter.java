@@ -8,6 +8,8 @@ public class SmsRouter extends RouteBuilder {
     @Override
     public void configure() throws Exception {
         from("jms:queue:sms")
+                .throttle(2)
+                .timePeriodMillis(1000)
                 .bean("kacperConnector", "send(${body}");
     }
 }
