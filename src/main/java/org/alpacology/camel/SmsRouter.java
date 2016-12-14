@@ -8,6 +8,7 @@ public class SmsRouter extends RouteBuilder {
     @Override
     public void configure() throws Exception {
         onException(Exception.class)
+                .handled(true)
                 .to("jms:queue:sms");
 
         from("jms:queue:sms")
