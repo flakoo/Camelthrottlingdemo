@@ -10,10 +10,10 @@ public class SmsSpammer {
     @Autowired
     private SmsSender smsSender;
 
-    private int counter = 1;
-
-    @Scheduled(fixedDelay = 20)
+    @Scheduled(fixedDelay = 20000000)
     public void spam() {
-        smsSender.sendViaConnector("THIS IS SPAM MESSAGE NO " + counter++);
+        for (int i = 0; i < 10; i++) {
+            smsSender.sendViaConnector("THIS IS SPAM MESSAGE NO " + i);
+        }
     }
 }
