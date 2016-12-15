@@ -11,40 +11,32 @@ import java.io.IOException;
 @Component
 public class SmsRouter extends RouteBuilder {
 
-    @Autowired
-    private ResendPredicate resendPrediacte;
-
     @Override
     public void configure() throws Exception {
         from("jms:queue:sms")
-                .doTry()
-                    .throttle(2)
-                    .timePeriodMillis(1000)
-                    .bean("inputOutputExceptionSmsConnector", "send(${body}")
-                .endDoTry()
-                .doCatch(IOException.class)
-                    .handled(true)
-                        .onWhen(resendPrediacte)
-                    .to("jms:queue:sms")
-                .doCatch(IOException.class)
-                    .handled(true)
-                    .log(LoggingLevel.ERROR, "GIVING UP :(");
-        from("jms:queue:sms")
-                .doTry()
-                    .throttle(2)
-                    .timePeriodMillis(1000)
-                    .bean("connectorExceptionSmsConnector", "send(${body}")
-                .endDoTry()
-                .doCatch(ConnectorException.class)
-                    .handled(true)
-                    .onWhen(resendPrediacte)
-                        .to("jms:queue:sms")
-                .doCatch(ConnectorException.class)
-                    .handled(true)
-                    .log(LoggingLevel.ERROR, "GIVING UP :(");
+                .throttle(2)
+                .timePeriodMillis(1000)
+                .loadBalance()
+                    .failover(IOException.class)
+                        .inheritErrorHandler(false)
+                    .to(
+                            "bean:inputOutputExceptionSmsConnector?method=send(${body}",
+                            "direct:workingRoute"
+                    );
         from("jms:queue:sms")
                 .throttle(2)
                 .timePeriodMillis(1000)
-                .bean("workingSmsConnector", "send(${body}");
+                .loadBalance()
+                .failover(ConnectorException.class)
+                    .inheritErrorHandler(false)
+                .to(
+                        "bean:connectorExceptionSmsConnector?method=send(${body}",
+                        "direct:workingRoute"
+                );
+
+        from("direct:workingRoute")
+                .throttle(2)
+                .timePeriodMillis(1000)
+                .to("bean:workingSmsConnector?method=send(${body}");
     }
 }
