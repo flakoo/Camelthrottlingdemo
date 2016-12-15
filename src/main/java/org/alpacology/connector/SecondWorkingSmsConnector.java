@@ -7,14 +7,13 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 
 @Service
-public class InputOutputExceptionSmsConnector implements BeanNameAware{
-    Logger LOGGER = Logger.getLogger(InputOutputExceptionSmsConnector.class);
+public class SecondWorkingSmsConnector implements BeanNameAware{
+    Logger LOGGER = Logger.getLogger(SecondWorkingSmsConnector.class);
 
     private String name;
 
     public void send(String sms) throws Exception {
-        LOGGER.info(name + " is throwing IOException for SMS: " + sms);
-        throw new IOException("OOPS");
+        LOGGER.info(name + " is sending SMS: " + sms);
     }
 
     @Override
