@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.concurrent.RejectedExecutionException;
 
 @Component
 public class SmsRouter extends RouteBuilder {
@@ -14,25 +15,31 @@ public class SmsRouter extends RouteBuilder {
     @Override
     public void configure() throws Exception {
         from("jms:queue:sms")
+                .onException(IOException.class)
+                    .handled(true)
+                .onException(RejectedExecutionException.class)
+                    .handled(true)
+                    .to("direct:workingRoute")
+                .end()
                 .throttle(2)
                 .timePeriodMillis(1000)
                 .loadBalance()
-                    .failover(IOException.class)
+                    .circuitBreaker(2, 2000L, IOException.class)
                         .inheritErrorHandler(false)
-                    .to(
-                            "bean:inputOutputExceptionSmsConnector?method=send(${body}",
-                            "direct:workingRoute"
-                    );
+                .to("bean:inputOutputExceptionSmsConnector?method=send(${body}");
         from("jms:queue:sms")
+                .onException(ConnectorException.class)
+                    .handled(true)
+                .onException(RejectedExecutionException.class)
+                    .handled(true)
+                    .to("direct:workingRoute")
+                .end()
                 .throttle(2)
                 .timePeriodMillis(1000)
                 .loadBalance()
-                .failover(ConnectorException.class)
-                    .inheritErrorHandler(false)
-                .to(
-                        "bean:connectorExceptionSmsConnector?method=send(${body}",
-                        "direct:workingRoute"
-                );
+                    .circuitBreaker(2, 2000L, ConnectorException.class)
+                        .inheritErrorHandler(false)
+                .to("bean:connectorExceptionSmsConnector?method=send(${body}");
 
         from("direct:workingRoute")
                 .throttle(2)
